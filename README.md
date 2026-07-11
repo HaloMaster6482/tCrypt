@@ -15,7 +15,13 @@ It keeps one hidden key file in your home folder so you do not need to remember 
 ## Install
 
 ```bash
-pip install -i https://test.pypi.org/simple/ tcrypt==0.1.0
+pip install tcrypt
+```
+
+If you are testing a release from TestPyPI, use this instead:
+
+```bash
+pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ tcrypt==0.1.0
 ```
 
 ## Usage
