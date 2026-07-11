@@ -45,10 +45,17 @@ def _show_result(title: str, rows: list[tuple[str, str]]) -> None:
     console.print(table)
 
 
+def _confirm_replace(path: Path) -> bool:
+    if not path.exists():
+        return True
+
+    return typer.confirm(f"{path} already exists. Replace it?", default=False)
+
+
 def _print_text_result(label: str, text: str, output: Path | None) -> None:
     if output is not None:
-        if output.exists():
-            raise typer.BadParameter(f"Output already exists: {output}")
+        if not _confirm_replace(output):
+            raise typer.Exit(code=1)
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(text, encoding="utf-8")
         _show_result(label, [("Saved to", str(output))])
@@ -74,8 +81,8 @@ def encrypt_file(
     _banner()
     key = load_or_create_key_file(key_file)
     destination = output or source.with_suffix(source.suffix + ".tcrypt")
-    if destination.exists():
-        raise typer.BadParameter(f"Output already exists: {destination}")
+    if not _confirm_replace(destination):
+        raise typer.Exit(code=1)
     artifact = encrypt_bytes("file", source.name, source.read_bytes(), key)
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_bytes(artifact)
@@ -95,8 +102,8 @@ def decrypt_file(
         raise typer.BadParameter("This file was not locked as a file.")
 
     destination = output or artifact.with_name(payload.name or artifact.stem)
-    if destination.exists():
-        raise typer.BadParameter(f"Output already exists: {destination}")
+    if not _confirm_replace(destination):
+        raise typer.Exit(code=1)
     destination.write_bytes(payload.data)
     _show_result("File Opened", [("Input", str(artifact)), ("Output", str(destination)), ("Key file", str(key_file))])
 
