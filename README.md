@@ -21,7 +21,7 @@ pip install tcrypt
 If you are testing a release from TestPyPI, use this instead:
 
 ```bash
-pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ tcrypt==0.1.1
+pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ tcrypt==1.0.0
 ```
 
 ## Usage

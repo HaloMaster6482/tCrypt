@@ -4,7 +4,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tcryption.crypto import (
+from typer.testing import CliRunner
+
+from tcrypt.cli import app
+from tcrypt.crypto import (
     decrypt_bytes,
     decode_message_artifact,
     encode_message_artifact,
@@ -41,6 +44,33 @@ class CryptoTests(unittest.TestCase):
 
             self.assertEqual(payload.kind, "message")
             self.assertEqual(payload.data.decode("utf-8"), "secret message")
+
+    def test_encrypt_file_prompts_and_replaces_existing_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            key_file = temp_path / ".tcrypt.key"
+            source = temp_path / "secret.txt"
+            output = temp_path / "locked.tcrypt"
+
+            source.write_text("hello file", encoding="utf-8")
+            output.write_bytes(b"old data")
+
+            runner = CliRunner()
+            result = runner.invoke(
+                app,
+                ["encrypt-file", str(source), "--output", str(output), "--key-file", str(key_file)],
+                input="y\n",
+            )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertIn("Replace file?", result.output)
+
+            key = load_or_create_key_file(key_file)
+            payload = decrypt_bytes(output.read_bytes(), key)
+
+            self.assertEqual(payload.kind, "file")
+            self.assertEqual(payload.name, source.name)
+            self.assertEqual(payload.data.decode("utf-8"), "hello file")
 
 
 if __name__ == "__main__":

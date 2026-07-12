@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import tempfile
 from pathlib import Path
 
 import typer
@@ -49,15 +51,35 @@ def _confirm_replace(path: Path) -> bool:
     if not path.exists():
         return True
 
-    return typer.confirm(f"{path} already exists. Replace it?", default=False)
+    console.print(
+        Panel.fit(
+            f"[bold yellow]A file already exists here.[/bold yellow]\n[white]{path}[/white]\n[dim]The existing file will be replaced with the new one.[/dim]",
+            title="Replace file?",
+            border_style="yellow",
+            box=box.ROUNDED,
+        )
+    )
+    return typer.confirm("Replace it?", default=False)
+
+
+def _atomic_write_bytes(destination: Path, data: bytes) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(delete=False, dir=destination.parent, prefix=f".{destination.name}.", suffix=".tmp") as temp_file:
+        temp_file.write(data)
+        temp_path = Path(temp_file.name)
+
+    os.replace(temp_path, destination)
+
+
+def _atomic_write_text(destination: Path, text: str) -> None:
+    _atomic_write_bytes(destination, text.encode("utf-8"))
 
 
 def _print_text_result(label: str, text: str, output: Path | None) -> None:
     if output is not None:
         if not _confirm_replace(output):
             raise typer.Exit(code=1)
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(text, encoding="utf-8")
+        _atomic_write_text(output, text)
         _show_result(label, [("Saved to", str(output))])
         return
 
@@ -104,7 +126,7 @@ def decrypt_file(
     destination = output or artifact.with_name(payload.name or artifact.stem)
     if not _confirm_replace(destination):
         raise typer.Exit(code=1)
-    destination.write_bytes(payload.data)
+    _atomic_write_bytes(destination, payload.data)
     _show_result("File Opened", [("Input", str(artifact)), ("Output", str(destination)), ("Key file", str(key_file))])
 
 
